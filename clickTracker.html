@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Click Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1ef;--panel:#fff;--ink:#14211f;--mute:#5d6b68;--line:#d3dad7;--accent:#e8452c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1716;--panel:#18231f;--ink:#e8efec;--mute:#93a5a0;--line:#2b3a36;--accent:#ff6a4d}}
+:root[data-theme="dark"]{--bg:#0f1716;--panel:#18231f;--ink:#e8efec;--mute:#93a5a0;--line:#2b3a36;--accent:#ff6a4d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "Bricolage Grotesque",system-ui,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 40px}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.top h1{font-size:20px;font-weight:800;margin:0;margin-right:auto}
+.who{color:var(--mute);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:10px;font:600 14px "Bricolage Grotesque",sans-serif;cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.main{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.grid.admin{grid-template-columns:minmax(0,1fr) 300px}
+@media(max-width:900px){.grid.admin{grid-template-columns:1fr}}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#frame{position:relative;background:#fbf7ef;color:#2a1f17;user-select:none}
+#frame a{color:inherit;text-decoration:none}
+#canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #e6dcc9}
+.nav b{font-size:20px}.nav span a{margin-left:18px}
+.hero{padding:44px 24px;display:grid;gap:12px;justify-items:start}
+.hero h2{font-size:clamp(28px,5vw,48px);line-height:1.05;margin:0;max-width:14ch}
+.hero p{margin:0}
+.cta{background:#2a1f17;color:#fbf7ef;padding:12px 22px;border-radius:8px;font-weight:600;border:0;font-family:inherit;font-size:15px;cursor:pointer}
+.cta.alt{background:none;color:#2a1f17;border:1.5px solid #2a1f17}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 24px 28px}
+.card{border:1px solid #e6dcc9;border-radius:10px;padding:14px;background:#fff9ee}
+.card .img{height:90px;border-radius:6px;margin-bottom:10px}
+.card h3{margin:0 0 2px;font-size:16px}.card p{margin:0 0 10px;font-size:13px;color:#6b5a4b}
+.foot{display:flex;gap:20px;flex-wrap:wrap;padding:18px 24px;border-top:1px solid #e6dcc9;font-size:13px;color:#6b5a4b}
+@media(max-width:560px){.cards{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.box h2{font-size:15px;margin:0 0 4px;font-weight:800}
+.box .n{color:var(--mute);font-size:13px;margin-bottom:10px}
+.legend{height:8px;border-radius:4px;background:linear-gradient(90deg,#2b3cff,#00d4ff,#3dff6b,#ffe600,#ff3b1f);margin:10px 0 2px}
+#log{font-size:13px;max-height:380px;overflow:auto;margin:0;padding:0;list-style:none}
+#log li{padding:6px 0;border-bottom:1px solid var(--line);color:var(--mute)}
+#log li b{color:var(--ink);font-weight:600}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:20px;width:min(340px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 12px;font-size:18px}
+dialog label{display:block;font-size:13px;color:var(--mute);margin:10px 0 3px}
+dialog input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.err{color:var(--accent);font-size:13px;min-height:20px;margin:8px 0 0}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Fernhill Coffee</h1>
+    <span class="who" id="who" hidden></span>
+    <button class="btn" id="login">Admin login</button>
+    <button class="btn" id="logout" hidden>Log out</button>
+  </div>
+
+  <div class="grid" id="grid">
+    <div class="stage">
+      <div id="frame">
+        <div class="nav"><b>Fernhill Coffee</b><span><a href="#" data-n="Nav: Shop">Shop</a><a href="#" data-n="Nav: Journal">Journal</a><a href="#" data-n="Nav: Cart">Cart (0)</a></span></div>
+        <div class="hero">
+          <h2>Small-batch coffee, roasted this week.</h2>
+          <p>Free shipping on your first bag.</p>
+          <div><button class="cta" data-n="Hero: Start subscription">Start a subscription</button> <button class="cta alt" data-n="Hero: Browse beans">Browse beans</button></div>
+        </div>
+        <div class="cards">
+          <div class="card"><div class="img" style="background:#c98b5a"></div><h3>Morning Blend</h3><p>Medium roast, chocolate notes</p><button class="cta" data-n="Card: Morning Blend">Add to cart</button></div>
+          <div class="card"><div class="img" style="background:#8a5a3b"></div><h3>Night Owl</h3><p>Dark roast, smoky and bold</p><button class="cta" data-n="Card: Night Owl">Add to cart</button></div>
+          <div class="card"><div class="img" style="background:#d9b382"></div><h3>Sunrise Light</h3><p>Light roast, citrus and floral</p><button class="cta" data-n="Card: Sunrise Light">Add to cart</button></div>
+        </div>
+        <div class="foot"><a href="#" data-n="Footer: Shipping">Shipping</a><a href="#" data-n="Footer: Returns">Returns</a><a href="#" data-n="Footer: Contact">Contact</a></div>
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+
+    <div id="side" hidden>
+      <div class="box">
+        <h2><span id="count">0</span> clicks</h2>
+        <div class="n">Heatmap is shown on the page. Admin clicks are not recorded.</div>
+        <div class="legend"></div>
+        <div class="n" style="display:flex;justify-content:space-between;margin:0 0 12px"><span>Few</span><span>Many</span></div>
+        <ul id="log"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <h2>Admin login</h2>
+  <form id="f" method="dialog">
+    <label for="em">Email</label><input id="em" type="email" autocomplete="username" required>
+    <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" required>
+    <p class="err" id="err" role="alert"></p>
+    <div class="row"><button type="button" class="btn" id="cancel">Cancel</button><button class="btn main" type="submit">Log in</button></div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  // ---- Change these two lines to set the admin login ----
+  var ADMIN_EMAIL='admin@example.com';
+  var ADMIN_PASS='admin123';
+  // -------------------------------------------------------
+
+  var KEY='clicks_v2', SKEY='admin_session';
+  var frame=document.getElementById('frame'), canvas=document.getElementById('canvas');
+  var clicks=[], isAdmin=false, mem=false;
+  var sid=Math.random().toString(36).slice(2,8);
+
+  function read(){try{clicks=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){clicks=[]}}
+  function write(){try{localStorage.setItem(KEY,JSON.stringify(clicks.slice(-5000)))}catch(e){}}
+  try{mem=sessionStorage.getItem(SKEY)==='1'}catch(e){}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]})}
+  function label(el){
+    var t=el.closest('[data-n]'); if(t) return t.getAttribute('data-n');
+    var txt=(el.textContent||'').trim().slice(0,24); return el.tagName.toLowerCase()+(txt?': '+txt:'');
+  }
+
+  // Visitors: record clicks silently. Admin: not recorded.
+  frame.addEventListener('click',function(e){
+    e.preventDefault();
+    if(isAdmin) return;
+    read();
+    var r=frame.getBoundingClientRect();
+    clicks.push({x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height,el:label(e.target),t:Date.now(),s:sid});
+    write();
+  });
+
+  var pal=(function(){
+    var c=document.createElement('canvas'); c.width=256; c.height=1;
+    var x=c.getContext('2d'), g=x.createLinearGradient(0,0,256,0);
+    [[0,'#2b3cff'],[.25,'#00d4ff'],[.5,'#3dff6b'],[.75,'#ffe600'],[1,'#ff3b1f']].forEach(function(s){g.addColorStop(s[0],s[1])});
+    x.fillStyle=g; x.fillRect(0,0,256,1); return x.getImageData(0,0,256,1).data;
+  })();
+
+  function drawHeat(){
+    var w=frame.clientWidth, h=frame.clientHeight; canvas.width=w; canvas.height=h;
+    var ctx=canvas.getContext('2d',{willReadFrequently:true}), rad=36;
+    ctx.clearRect(0,0,w,h);
+    clicks.forEach(function(c){
+      var x=c.x*w, y=c.y*h, g=ctx.createRadialGradient(x,y,0,x,y,rad);
+      g.addColorStop(0,'rgba(0,0,0,0.16)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,rad,0,6.2832); ctx.fill();
+    });
+    if(!clicks.length) return;
+    var img=ctx.getImageData(0,0,w,h), d=img.data;
+    for(var i=0;i<d.length;i+=4){
+      var a=d[i+3]; if(!a) continue;
+      var k=Math.min(255,a*3)*4;
+      d[i]=pal[k]; d[i+1]=pal[k+1]; d[i+2]=pal[k+2]; d[i+3]=Math.min(210,a*2.5+30);
+    }
+    ctx.putImageData(img,0,0);
+  }
+
+  function renderAdmin(){
+    read();
+    document.getElementById('count').textContent=clicks.length;
+    var log=document.getElementById('log');
+    log.innerHTML=clicks.length?clicks.slice(-50).reverse().map(function(c){
+      return '<li><b>'+esc(c.el)+'</b><br>'+Math.round(c.x*100)+'% across, '+Math.round(c.y*100)+'% down · '+new Date(c.t).toLocaleString()+'</li>';
+    }).join(''):'<li>No clicks recorded yet in this browser.</li>';
+    drawHeat();
+  }
+
+  function setAdmin(on){
+    isAdmin=on;
+    document.getElementById('grid').className='grid'+(on?' admin':'');
+    document.getElementById('side').hidden=!on;
+    canvas.style.display=on?'block':'none';
+    document.getElementById('login').hidden=on;
+    document.getElementById('logout').hidden=!on;
+    var who=document.getElementById('who'); who.hidden=!on; who.textContent=on?ADMIN_EMAIL:'';
+    try{on?sessionStorage.setItem(SKEY,'1'):sessionStorage.removeItem(SKEY)}catch(e){}
+    if(on) renderAdmin();
+  }
+
+  var dlg=document.getElementById('dlg'), err=document.getElementById('err');
+  document.getElementById('login').onclick=function(){err.textContent='';dlg.showModal();document.getElementById('em').focus()};
+  document.getElementById('cancel').onclick=function(){dlg.close()};
+  document.getElementById('f').addEventListener('submit',function(e){
+    e.preventDefault();
+    var em=document.getElementById('em').value.trim().toLowerCase(), pw=document.getElementById('pw').value;
+    if(em===ADMIN_EMAIL.toLowerCase() && pw===ADMIN_PASS){
+      dlg.close(); document.getElementById('pw').value=''; setAdmin(true);
+    } else { err.textContent='Wrong email or password.'; }
+  });
+  document.getElementById('logout').onclick=function(){setAdmin(false)};
+  if(window.ResizeObserver) new ResizeObserver(function(){if(isAdmin)drawHeat()}).observe(frame);
+
+  if(mem) setAdmin(true);
+})();
+</script>
+</body>
+</html>
